@@ -98,6 +98,8 @@ class GreedySearch(DecodeStrategy):
         eos (int): See base.
         unk (int): See base.
         start (int): See base.
+        n_best (int): Don't stop until at least this many beams have
+            reached EOS.
         batch_size (int): See base.
         global_scorer (onmt.translate.GNMTGlobalScorer): Scorer instance.
         min_length (int): See base.
@@ -123,6 +125,7 @@ class GreedySearch(DecodeStrategy):
         eos,
         unk,
         start,
+        n_best,
         batch_size,
         global_scorer,
         min_length,
@@ -157,6 +160,7 @@ class GreedySearch(DecodeStrategy):
         self.keep_topp = keep_topp
         self.topk_scores = None
         self.beam_size = beam_size
+        self.n_best = n_best
 
     def initialize(
         self, enc_out, src_len, src_map=None, device=None, target_prefix=None
@@ -199,7 +203,7 @@ class GreedySearch(DecodeStrategy):
         topk_ids, topk_scores = sample_with_temperature(
             log_probs, self.sampling_temp, self.keep_topk, self.keep_topp
         )
-
+        # (batch_size, 1), (batch_size, 1)
         return topk_ids, topk_scores
 
     def align_select_indices(self):
@@ -234,7 +238,7 @@ class GreedySearch(DecodeStrategy):
 
         topk_ids, self.topk_scores = self._pick(log_probs)
         self.beams_scores += self.topk_scores
-
+        # (batch_size, 1)
         self.is_finished = topk_ids.eq(self.eos)
         self.is_finished_list = self.is_finished.tolist()
 
@@ -265,7 +269,20 @@ class GreedySearch(DecodeStrategy):
                 else []
             )
             self.hypotheses[b_orig].append((score, pred, attention))
+            if len(self.hypotheses[b_orig]) >= 2:
+                self.hypotheses[b_orig] = sorted(
+                    self.hypotheses[b_orig], key=lambda x: x[0], reverse=True
+                )
         self.done = self.is_finished.all()
+        # Check if we have sufficient hypotheses for all instances in the batch
+        # - If this condition is not satisfied, we update self.is_finished and continue.
+        if self.done:
+            for b in finished_batches.view(-1):
+                b_orig = self.original_batch_idx[b]
+                if (len(self.hypotheses[b_orig]) < self.n_best):
+                    self.done = False
+                    self.is_finished[b_orig] = False
+        # - Otherwise, we clean up the results.
         if self.done:
             for b in range(self.batch_size):
                 best_hyp = sorted(self.hypotheses[b], key=lambda x: x[0], reverse=True)
@@ -274,6 +291,8 @@ class GreedySearch(DecodeStrategy):
                     self.predictions[b].append(pred)
                     self.attention[b].append(attn)
             return
+        else:
+            self.is_finished_list = self.is_finished.tolist()
         is_alive = ~self.is_finished.view(-1)
         self.alive_seq = self.alive_seq[is_alive]
         self.beams_scores = self.beams_scores[is_alive]

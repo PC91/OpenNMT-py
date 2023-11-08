@@ -41,23 +41,24 @@ class TestGreedySearch(unittest.TestCase):
             eos_idx = 2
             lengths = torch.randint(0, 30, (batch_sz,))
             samp = GreedySearch(
-                0,
-                1,
-                2,
-                3,
-                1,
-                batch_sz,
-                GlobalScorerStub(),
-                min_length,
-                False,
-                set(),
-                False,
-                30,
-                1.0,
-                1,
-                0,
-                1,
-                False,
+                pad=0,
+                bos=1,
+                eos=2,
+                unk=3,
+                start=1,
+                n_best=1,
+                batch_size=batch_sz,
+                global_scorer=GlobalScorerStub(),
+                min_length=min_length,
+                block_ngram_repeat=False,
+                exclusion_tokens=set(),
+                return_attention=False,
+                max_length=30,
+                sampling_temp=1.0,
+                keep_topk=1,
+                keep_topp=0,
+                beam_size=1,
+                ban_unk_token=False,
             )
             samp.initialize(torch.zeros((1, 1)), lengths)
             all_attns = []
@@ -95,23 +96,24 @@ class TestGreedySearch(unittest.TestCase):
                 eos_idx = 2
                 lengths = torch.randint(0, 30, (batch_sz,))
                 samp = GreedySearch(
-                    0,
-                    1,
-                    2,
-                    3,
-                    1,
-                    batch_sz,
-                    GlobalScorerStub(),
-                    0,
-                    False,
-                    set(),
-                    False,
-                    30,
-                    temp,
-                    1,
-                    0,
-                    1,
-                    False,
+                    pad=0,
+                    bos=1,
+                    eos=2,
+                    unk=3,
+                    start=1,
+                    n_best=1,
+                    batch_size=batch_sz,
+                    global_scorer=GlobalScorerStub(),
+                    min_length=0,
+                    block_ngram_repeat=False,
+                    exclusion_tokens=set(),
+                    return_attention=False,
+                    max_length=30,
+                    sampling_temp=temp,
+                    keep_topk=1,
+                    keep_topp=0,
+                    beam_size=1,
+                    ban_unk_token=False,
                 )
                 samp.initialize(torch.zeros((1, 1)), lengths)
                 # initial step
@@ -181,23 +183,24 @@ class TestGreedySearch(unittest.TestCase):
                 eos_idx = 2
                 lengths = torch.randint(0, 30, (batch_sz,))
                 samp = GreedySearch(
-                    0,
-                    1,
-                    2,
-                    3,
-                    1,
-                    batch_sz,
-                    GlobalScorerStub(),
-                    0,
-                    False,
-                    set(),
-                    False,
-                    30,
-                    temp,
-                    2,
-                    0,
-                    1,
-                    False,
+                    pad=0,
+                    bos=1,
+                    eos=2,
+                    unk=3,
+                    start=1,
+                    n_best=1,
+                    batch_size=batch_sz,
+                    global_scorer=GlobalScorerStub(),
+                    min_length=0,
+                    block_ngram_repeat=False,
+                    exclusion_tokens=set(),
+                    return_attention=False,
+                    max_length=30,
+                    sampling_temp=temp,
+                    keep_topk=2,
+                    keep_topp=0,
+                    beam_size=1,
+                    ban_unk_token=False,
                 )
                 samp.initialize(torch.zeros((1, 1)), lengths)
                 # initial step
@@ -292,23 +295,24 @@ class TestGreedySearch(unittest.TestCase):
                 eos_idx = 2
                 lengths = torch.randint(0, 30, (batch_sz,))
                 samp = GreedySearch(
-                    0,
-                    1,
-                    2,
-                    3,
-                    1,
-                    batch_sz,
-                    GlobalScorerStub(),
-                    0,
-                    False,
-                    set(),
-                    False,
-                    30,
-                    temp,
-                    50,
-                    0,
-                    beam_size,
-                    False,
+                    pad=0,
+                    bos=1,
+                    eos=2,
+                    unk=3,
+                    start=1,
+                    n_best=1,
+                    batch_size=batch_sz,
+                    global_scorer=GlobalScorerStub(),
+                    min_length=0,
+                    block_ngram_repeat=False,
+                    exclusion_tokens=set(),
+                    return_attention=False,
+                    max_length=30,
+                    sampling_temp=temp,
+                    keep_topk=50,
+                    keep_topp=0,
+                    beam_size=beam_size,
+                    ban_unk_token=False,
                 )
                 samp.initialize(torch.zeros((1, 1)), lengths)
                 # initial step
@@ -374,7 +378,7 @@ class TestGreedySearch(unittest.TestCase):
 
                 samp.update_finished()
                 self.assertEqual(
-                    [score for score, _, _ in samp.hypotheses[batch_sz - 1][-1:]],
+                    [score for score, _, _ in samp.hypotheses[batch_sz - 1][:1]],
                     [valid_score_dist_2[0] / temp],
                 )
 
@@ -414,23 +418,24 @@ class TestGreedySearch(unittest.TestCase):
                 eos_idx = 2
                 lengths = torch.randint(0, 30, (batch_sz,))
                 samp = GreedySearch(
-                    0,
-                    1,
-                    2,
-                    3,
-                    1,
-                    batch_sz,
-                    GlobalScorerStub(),
-                    0,
-                    False,
-                    set(),
-                    False,
-                    -1,
-                    temp,
-                    50,
-                    0.5,
-                    1,
-                    False,
+                    pad=0,
+                    bos=1,
+                    eos=2,
+                    unk=3,
+                    start=1,
+                    n_best=1,
+                    batch_size=batch_sz,
+                    global_scorer=GlobalScorerStub(),
+                    min_length=0,
+                    block_ngram_repeat=False,
+                    exclusion_tokens=set(),
+                    return_attention=False,
+                    max_length=-1,
+                    sampling_temp=temp,
+                    keep_topk=50,
+                    keep_topp=0.5,
+                    beam_size=1,
+                    ban_unk_token=False,
                 )
                 samp.initialize(torch.zeros((1, 1)), lengths)
                 # initial step
@@ -513,4 +518,63 @@ class TestGreedySearch(unittest.TestCase):
                         "increase the range of the for-loop."
                     )
 
+                self.assertTrue(samp.done)
+
+    def test_returns_correct_nb_hypotheses_non_deterministic_topp(self):
+        for batch_sz in [1, 13]:
+            for n_best in [4, 8]:
+                temp = 1.0
+                n_words = 100
+                _non_eos_idxs = [47, 51, 13, 88, 99]
+                valid_score_dist_1 = torch.log_softmax(
+                    torch.tensor([6.0, 5.0, 4.0, 3.0, 2.0, 1.0]), dim=0
+                )
+                valid_score_dist_2 = torch.log_softmax(torch.tensor([6.0, 1.0]), dim=0)
+                eos_idx = 2
+                lengths = torch.randint(0, 30, (batch_sz,))
+                samp = GreedySearch(
+                    pad=0,
+                    bos=1,
+                    eos=2,
+                    unk=3,
+                    start=1,
+                    n_best=n_best,
+                    batch_size=batch_sz,
+                    global_scorer=GlobalScorerStub(),
+                    min_length=0,
+                    block_ngram_repeat=False,
+                    exclusion_tokens=set(),
+                    return_attention=False,
+                    max_length=-1,
+                    sampling_temp=temp,
+                    keep_topk=50,
+                    keep_topp=0.5,
+                    beam_size=2*n_best,
+                    ban_unk_token=False,
+                )
+                samp.initialize(torch.zeros((1, 1)), lengths)
+                # initial step
+                i = 0
+                for _ in range(100):
+                    word_probs = torch.full((batch_sz, n_words), -float("inf"))
+                    # batch 0 dies on step 0
+                    word_probs[0, eos_idx] = valid_score_dist_1[0]
+                    # include at least one prediction OTHER than EOS
+                    # that is greater than -1e20
+                    word_probs[0, _non_eos_idxs] = valid_score_dist_1[1:]
+                    word_probs[1:, _non_eos_idxs[0] + i] = 0
+
+                    attns = torch.randn(1, batch_sz, 53)
+                    samp.advance(word_probs, attns)
+                    any_finished = any(
+                        [any(sublist) for sublist in samp.is_finished_list]
+                    )
+                    if any_finished:
+                        samp.update_finished()
+                        if samp.done:
+                            break
+                self.assertEqual(
+                    [len(hypothesis) for hypothesis in samp.hypotheses],
+                    [n_best for _ in samp.hypotheses],
+                )
                 self.assertTrue(samp.done)
