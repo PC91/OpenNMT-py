@@ -35,6 +35,7 @@ setup(
         "fasttext-wheel",
         "spacy",
         "six",
+        "emoji"
     ],
     entry_points={
         "console_scripts": [

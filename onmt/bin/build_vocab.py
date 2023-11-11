@@ -3,6 +3,7 @@
 import os
 import copy
 import re
+import emoji
 import multiprocessing as mp
 import pyonmttok
 from functools import partial
@@ -149,24 +150,19 @@ def build_vocab(opts, transforms, n_sample=3):
         write_process.join()
     return counter_src, counter_tgt, counter_src_feats
 
-def character_filter():
-    # The following cases are valid for a character:
-    # - Punctuations, US-ASCII
-    # - Sentencepiece default joiner ￭
-    # - Latin characters (0020-007E)
-    # - Extended Latin characters (00C0-024F)
-    return r'[^!"#$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~￭\u0020-\u007E\u00C0-\u024F]'
-
 def is_valid_token(token):
-    return (not re.search(character_filter(), token))
-
-def transform_sentence(sent):
-    # Step 1: Remove invalid characters.
-    # Step 2: Remove redundant spaces.
-    combined_pattern = character_filter()
-    sent = re.sub(combined_pattern, "", sent)
-    sent = re.sub(' +', ' ', sent)
-    return sent
+    # The following cases are valid for a character:
+    # - Containing Emojis
+    # - Containing some non-latin characters:
+    #   + Chinese (4E00-9FFF)
+    #   + Korean (AC00-D7A3)
+    #   + Thai (0E00-0E7F)
+    #   + Khmer (1780-17FF)
+    count = emoji.emoji_count(token)
+    if count > 0:
+        return False
+    regex_excl_characters = r'[\u4e00-\u9fff\uac00-\ud7a3\u0e00-\u0e7f\u1780—\u17ff]'
+    return (not re.search(regex_excl_characters, token))
 
 def ingest_tokens(opts, transforms, n_sample, learner, stride, offset):
     def _mp_ingest(data):
@@ -181,11 +177,8 @@ def ingest_tokens(opts, transforms, n_sample, learner, stride, offset):
             for ex in bucket:
                 if ex is not None:
                     src_line, tgt_line = (ex["src"]["src"], ex["tgt"]["tgt"])
-                    src_line = transform_sentence(src_line)
-                    tgt_line = transform_sentence(tgt_line)
-                    if (len(src_line) > 0) and (len(tgt_line) > 0):
-                        learner.ingest(src_line)
-                        learner.ingest(tgt_line)
+                    learner.ingest(src_line)
+                    learner.ingest(tgt_line)
 
     corpora = get_corpora(opts, task=CorpusTask.TRAIN)
     datasets_iterables = build_corpora_iters(

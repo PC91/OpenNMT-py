@@ -6,3 +6,4 @@ scipy
 bitsandbytes>=0.39.1
 safetensors
 spacy
+emoji
