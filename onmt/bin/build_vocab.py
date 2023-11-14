@@ -20,6 +20,80 @@ from collections import Counter
 
 MAXBUCKETSIZE = 256000
 
+CHR_ASCII = range(0x0000, 0x0020)
+
+CHR_LATIN_BASIC = range(0x0020, 0x007F)
+CHR_LATIN_1_SUPP = range(0x00A0, 0x00FF)
+CHR_LATIN_EXTENDED_A = range(0x0100, 0x017F)
+CHR_LATIN_EXTENDED_B = range(0x0180, 0x024F)
+CHR_LATIN_EXTENDED_ADDITIONAL = range(0x1E00, 0x1EFF)
+
+CHR_SMALL_FORM_VARIANTS = range(0xFE50, 0xFE6F)
+CHR_HALFWIDTH_AND_FULLWIDTH_FORMS = range(0xFF00, 0xFFEF)
+CHR_GENERAL_PUNCTUATION = range(0x2000, 0x206F)
+CHR_COMBINING_DIACRITICAL_MARKS = range(0x0300, 0x036F)
+
+CHR_CURRENCY_SYMBOLS = range(0x20A0, 0x20CF)
+
+CHR_NUMBER_FORMS = range(0x2150, 0x218F)
+CHR_MATHEMATICAL_OPERATORS = range(0x2200, 0x22FF)
+CHR_SUPERSCRIPTS_AND_SUBSCRIPTS = range(0x2070, 0x209F)
+
+CHR_SPACING_MODIFIERS = range(0x02B0, 0x02FF)
+CHR_LETTERLIKE_SYMBOLS = range(0x2100, 0x214F)
+
+def is_valid_char(character):
+    try:
+        code = ord(character)
+        if code in CHR_ASCII:
+            return True
+        if code in CHR_LATIN_BASIC:
+            return True
+        if code in CHR_LATIN_1_SUPP:
+            return True
+        if code in CHR_LATIN_EXTENDED_A:
+            return True
+        if code in CHR_LATIN_EXTENDED_B:
+            return True
+        if code in CHR_LATIN_EXTENDED_ADDITIONAL:
+            return True
+        if code in CHR_SMALL_FORM_VARIANTS:
+            return True
+        if code in CHR_HALFWIDTH_AND_FULLWIDTH_FORMS:
+            return True
+        if code in CHR_GENERAL_PUNCTUATION:
+            return True
+        if code in CHR_COMBINING_DIACRITICAL_MARKS:
+            return True
+        if code in CHR_CURRENCY_SYMBOLS:
+            return True
+        if code in CHR_NUMBER_FORMS:
+            return True
+        if code in CHR_MATHEMATICAL_OPERATORS:
+            return True
+        if code in CHR_SUPERSCRIPTS_AND_SUBSCRIPTS:
+            return True
+        if code in CHR_SPACING_MODIFIERS:
+            return True
+        if code in CHR_LETTERLIKE_SYMBOLS:
+            return True
+    except UnicodeEncodeError:
+        return False
+    return False
+
+def transform_sentence(sent):
+    return (
+        ''.join([char for char in sent if is_valid_char(char)])
+    )
+
+def is_valid_token(token):
+    # Check if a token contains emojis or invalid characters
+    count = emoji.emoji_count(token)
+    if count > 0:
+        return False
+    if (any([not is_valid_char(c) for c in token])):
+        return False
+    return True
 
 def write_files_from_queues(sample_path, queues):
     """
@@ -150,20 +224,6 @@ def build_vocab(opts, transforms, n_sample=3):
         write_process.join()
     return counter_src, counter_tgt, counter_src_feats
 
-def is_valid_token(token):
-    # The following cases are valid for a character:
-    # - Containing Emojis
-    # - Containing some non-latin characters:
-    #   + Chinese (4E00-9FFF)
-    #   + Korean (AC00-D7A3)
-    #   + Thai (0E00-0E7F)
-    #   + Khmer (1780-17FF)
-    count = emoji.emoji_count(token)
-    if count > 0:
-        return False
-    regex_excl_characters = r'[\u4e00-\u9fff\uac00-\ud7a3\u0e00-\u0e7f\u1780—\u17ff]'
-    return (not re.search(regex_excl_characters, token))
-
 def ingest_tokens(opts, transforms, n_sample, learner, stride, offset):
     def _mp_ingest(data):
         func = partial(process, CorpusName.TRAIN)
@@ -177,8 +237,11 @@ def ingest_tokens(opts, transforms, n_sample, learner, stride, offset):
             for ex in bucket:
                 if ex is not None:
                     src_line, tgt_line = (ex["src"]["src"], ex["tgt"]["tgt"])
-                    learner.ingest(src_line)
-                    learner.ingest(tgt_line)
+                    src_line = transform_sentence(src_line)
+                    tgt_line = transform_sentence(tgt_line)
+                    if (len(src_line) > 0) and (len(tgt_line) > 0):
+                        learner.ingest(src_line)
+                        learner.ingest(tgt_line)
 
     corpora = get_corpora(opts, task=CorpusTask.TRAIN)
     datasets_iterables = build_corpora_iters(
