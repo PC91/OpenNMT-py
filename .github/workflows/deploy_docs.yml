@@ -1,9 +1,24 @@
-name: Deploy Docs & Publish to PyPi
+# This is a basic workflow that is manually triggered
 
+name: Manual workflow
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Person to greet'
+        # Default value if no value is explicitly provided
+        default: 'World'
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: string
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   deploy-docs:
     runs-on: ubuntu-latest
@@ -31,24 +46,3 @@ jobs:
         BRANCH: gh-pages
         FOLDER: docs/build/html
         CLEAN: true
-  publish-pypi:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade setuptools wheel
-    - name: Build a binary wheel and a source tarball
-      run: |
-        python setup.py sdist bdist_wheel
-    - name: Publish release to PyPi
-      uses: pypa/gh-action-pypi-publish@54b39fb9371c0b3a6f9f14bb8a67394defc7a806
-      with:
-        user: __token__
-        password: ${{ secrets.pypi_password }}
-        verbose: true
